@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evan"s Unlimited GK Quiz</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .quiz-container {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+      max-width: 600px;
+      width: 100%;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .hidden {
+      display: none;
+    }
+    button {
+      padding: 12px 25px;
+      margin: 8px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 10px;
+      transition: all 0.3s ease;
+      background-color: #4CAF50;
+      color: white;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+      background-color: #45a049;
+    }
+    button:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    #answers button {
+        display: block;
+        width: 90%;
+        margin: 10px auto;
+        background-color: #007bff; 
+    }
+    #answers button:hover {
+        background-color: #0056b3;
+    }
+    #questionBox {
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #questionText {
+      font-size: 1.4rem;
+      margin-bottom: 20px;
+      font-weight: bold;
+      color: #333;
+    }
+    #timer {
+      font-weight: bold;
+      font-size: 1.8rem;
+      color: #e94e77; 
+      margin-top: 15px;
+    }
+    #feedback {
+      font-weight: bold;
+      margin-top: 10px;
+      font-size: 1.1rem;
+      min-height: 25px; 
+    }
+    #scoreDisplay {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #28a745;
+      margin-top: 15px;
+    }
+    #leaderboard h2 {
+      margin-bottom: 15px;
+      color: #333;
+    }
+    #leaderboardList {
+      list-style: none;
+      padding: 0;
+      max-height: 250px; 
+      overflow-y: auto;
+      border: 1px solid #eee;
+      border-radius: 10px;
+      padding: 10px;
+    }
+    #leaderboardList li {
+      padding: 8px 0;
+      border-bottom: 1px dashed #e0e0e0;
+      font-size: 1rem;
+      color: #555;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    #leaderboardList li:last-child {
+      border-bottom: none;
+    }
+    input[type="text"] {
+        padding: 10px;
+        font-size: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        width: 80%;
+        max-width: 300px;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="quiz-container">
+    <div id="startScreen">
+      <h2 class="text-3xl font-bold mb-5 text-gray-800">Evan's Unlimited GK Quiz</h2>
+      <p class="text-lg mb-4 text-gray-700">Enter your name :</p>
+      <input type="text" id="playerName" value="" placeholder="Name" />
+      <button onclick="startQuiz()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300">Start Quiz</button>
+      
+      <div id="leaderboard" class="mt-8">
+        <h2 class="text-2xl font-semibold mb-4 text-gray-800">Leaderboard</h2>
+        <ul id="leaderboardList" class="bg-gray-50 p-4 rounded-lg shadow-inner">
+          <li>loading leaderboard</li>
+        </ul>
+      </div>
+    </div>
+
+    <div id="quiz" class="hidden">
+      <h2 class="text-3xl font-bold mb-5 text-gray-800">GK Quiz</h2>
+      <div id="questionBox" class="bg-white p-6 rounded-lg shadow-md">
+        <p id="questionText" class="text-lg mb-4">Loading question...</p>
+        <div id="answers" class="grid grid-cols-1 gap-3"></div>
+        <p id="timer" class="mt-4"></p>
+        <p id="feedback" class="mt-2"></p>
+      </div>
+      <div id="scoreDisplay" class="text-2xl font-bold text-green-600"></div>
+      <button onclick="stopQuiz()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300">End Quiz</button>
+    </div>
+  </div>
+
+  <script type="module">
+   
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+    import { getDatabase, ref, set, get, update, onValue } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+
+   
+    const firebaseConfig = {
+      apiKey: "AIzaSyC5I7Q02U1SeFRsHhmyUk_4Sqw1Li8qD6A", 
+      authDomain: "gkquestionspart1-b6c76.firebaseapp.com",
+      databaseURL: "https://gkquestionspart1-b6c76-default-rtdb.firebaseio.com",
+      projectId: "gkquestionspart1-b6c76",
+      storageBucket: "gkquestionspart1-b6c76.appspot.com",
+      messagingSenderId: "667530619472",
+      appId: "1:667530619472:web:ca7fefbc5fe65d5fba3f55"
+    };
+
+  
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+  
+    let player = ""; 
+    let playerScoreRef = null; 
+    let currentOverallScore = 0;
+    let timerInterval; 
+    let questionsCache = []; 
+    let currentQuestionIndex = 0; 
+    const BATCH_SIZE = 10; 
+    const QUESTION_TIME_LIMIT = 15;
+    const CORRECT_ANSWER_POINTS = 1; 
+    const WRONG_ANSWER_PENALTY = 0.5; 
+   
+    async function fetchQuestionsBatch(amount = BATCH_SIZE) {
+    
+      document.getElementById("questionText").textContent = "Fetching new questions...";
+      document.getElementById("answers").innerHTML = ""; 
+      document.getElementById("timer").textContent = ""; 
+      document.getElementById("feedback").textContent = ""; 
+
+      try {
+        const response = await fetch(`https://opentdb.com/api.php?amount=${amount}&type=multiple`);
+
+        if (!response.ok) {
+         
+          if (response.status === 429) {
+            console.warn("OpenTDB API Rate Limit Hit (429). Please wait before retrying.");
+            document.getElementById("questionText").textContent = "Wait some time and refresh";
+          } else {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          clearInterval(timerInterval); 
+          return [];
+        }
+
+        const data = await response.json();
+        if (!data.results || data.results.length === 0) {
+          console.warn("OpenTDB API returned no results in batch.");
+          document.getElementById("questionText").textContent = "No questions received. Try restarting.";
+          clearInterval(timerInterval);
+          return [];
+        }
+
+     
+        return data.results.map(q => ({
+          q: decodeHTML(q.question),
+          options: shuffle([...q.incorrect_answers.map(decodeHTML), decodeHTML(q.correct_answer)]),
+          a: decodeHTML(q.correct_answer)
+        }));
+
+      } catch (err) {
+        console.error("Error fetching question batch from OpenTDB:", err);
+        document.getElementById("questionText").textContent = `Error loading questions: ${err.message}. Please check your internet connection `;
+        clearInterval(timerInterval); 
+        return [];
+      }
+    }
+
+    function decodeHTML(html) {
+      const txt = document.createElement("textarea");
+      txt.innerHTML = html;
+      return txt.value;
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+ 
+    window.startQuiz = async function () {
+      player = document.getElementById("playerName").value.trim();
+      
+  
+      if (!player) {
+        alert("You did not write name write it"); 
+        return; 
+      }
+
+  
+      const playerKey = encodeURIComponent(player.toLowerCase()); 
+      playerScoreRef = ref(db, `playerScores/${playerKey}`);
+
+     
+      try {
+        const snapshot = await get(playerScoreRef);
+        if (snapshot.exists()) {
+          currentOverallScore = snapshot.val().score || 0; 
+          console.log(`Loaded existing score for ${player}: ${currentOverallScore}`);
+        } else {
+          currentOverallScore = 0;
+          await set(playerScoreRef, { name: player, score: currentOverallScore, lastPlayed: new Date().toISOString() });
+          console.log(`New player ${player} initialized with score 0.`);
+        }
+      } catch (error) {
+        console.error("Error loading or initializing player score from database:", error);
+        document.getElementById("questionText").textContent = "Error loading leaderboard";
+        return; 
+      }
+
+      
+      clearInterval(timerInterval); 
+      questionsCache = []; 
+      currentQuestionIndex = 0;
+
+    
+      document.getElementById("startScreen").classList.add("hidden");
+      document.getElementById("quiz").classList.remove("hidden");
+      document.getElementById("scoreDisplay").textContent = `Overall Score: ${currentOverallScore.toFixed(1)}`; 
+
+   
+      const initialQuestions = await fetchQuestionsBatch(BATCH_SIZE);
+      if (initialQuestions.length > 0) {
+        questionsCache = initialQuestions;
+        showNextQuestion();
+      } else {
+        stopQuiz(false);
+        document.getElementById("questionText").textContent = "Could not start quiz try again";
+      }
+    };
+
+ 
+    async function showNextQuestion() {
+      clearInterval(timerInterval);
+      document.getElementById("feedback").textContent = "";
+
+      if (currentQuestionIndex >= questionsCache.length - 2) { 
+        console.log("Cache low, fetching next batch of questions...");
+        const newQuestions = await fetchQuestionsBatch(BATCH_SIZE);
+        if (newQuestions.length > 0) {
+          questionsCache = questionsCache.slice(currentQuestionIndex).concat(newQuestions);
+          currentQuestionIndex = 0;
+        } else {
+          document.getElementById("questionText").textContent = "No more q";
+          document.getElementById("answers").innerHTML = "";
+          stopQuiz(); 
+          return;
+        }
+      }
+
+      const q = questionsCache[currentQuestionIndex];
+      if (!q) {
+        document.getElementById("questionText").textContent = "Failed to retrieve next question from cache. Please restart.";
+        document.getElementById("answers").innerHTML = "";
+        stopQuiz();
+        return;
+      }
+
+      document.getElementById("questionText").textContent = q.q;
+      const answersDiv = document.getElementById("answers");
+      answersDiv.innerHTML = ""; 
+
+      q.options.forEach(opt => {
+        const btn = document.createElement("button");
+        btn.textContent = opt;
+        btn.onclick = () => handleAnswer(opt, q.a); 
+        answersDiv.appendChild(btn);
+      });
+
+      let count = QUESTION_TIME_LIMIT;
+      document.getElementById("timer").textContent = `Time: ${count}s`;
+      timerInterval = setInterval(() => {
+        count--;
+        document.getElementById("timer").textContent = `Time: ${count}s`;
+        if (count <= 0) {
+          clearInterval(timerInterval); 
+          document.getElementById("feedback").textContent = `Time up correct answer was: ${q.a}`;
+          document.getElementById("feedback").style.color = "red";
+          disableAnswerButtons(); 
+          currentOverallScore -= WRONG_ANSWER_PENALTY;
+          document.getElementById("scoreDisplay").textContent = `Overall Score: ${currentOverallScore.toFixed(1)}`;
+          updateOverallScoreInDB(); 
+          setTimeout(() => {
+            currentQuestionIndex++; 
+            showNextQuestion();
+          }, 1500); 
+        }
+      }, 1000); 
+    }
+
+    async function handleAnswer(selected, correct) {
+      clearInterval(timerInterval); 
+      const feedback = document.getElementById("feedback");
+      disableAnswerButtons(); 
+
+      if (selected === correct) {
+        currentOverallScore += CORRECT_ANSWER_POINTS;
+        feedback.textContent = "Correct! (+1.0 points)";
+        feedback.style.color = "green";
+      } else {
+        currentOverallScore -= WRONG_ANSWER_PENALTY;
+        feedback.textContent = `Wrong! Correct answer was: ${correct} (-0.5 points)`;
+        feedback.style.color = "red";
+      }
+      document.getElementById("scoreDisplay").textContent = `Overall Score: ${currentOverallScore.toFixed(1)}`;
+      await updateOverallScoreInDB();
+      setTimeout(() => {
+        currentQuestionIndex++; 
+        showNextQuestion();
+      }, 1500); 
+    }
+
+    async function updateOverallScoreInDB() {
+      if (playerScoreRef) { 
+        try {
+          await update(playerScoreRef, { 
+            score: currentOverallScore, 
+            lastPlayed: new Date().toISOString() 
+          });
+          console.log(`Score updated in DB for ${player}: ${currentOverallScore.toFixed(1)}`);
+        } catch (error) {
+          console.error("Error updating score in database:", error);
+          document.getElementById("feedback").textContent += " (Score update failed!)"; 
+        }
+      }
+    }
+
+  
+    function disableAnswerButtons() {
+        const buttons = document.querySelectorAll("#answers button");
+        buttons.forEach(btn => btn.disabled = true);
+    }
+
+    window.stopQuiz = function (shouldSaveScore = true) {
+      clearInterval(timerInterval); // Ensure any active timers are stopped
+      document.getElementById("quiz").classList.add("hidden");
+      document.getElementById("startScreen").classList.remove("hidden");
+
+      if (shouldSaveScore) {
+          document.getElementById("scoreDisplay").textContent = `Quiz Ended! Your Overall Score: ${currentOverallScore.toFixed(1)}`;
+      } else {
+          document.getElementById("scoreDisplay").textContent = ""; 
+      }
+      
+      loadLeaderboard(); 
+      questionsCache = [];
+      currentQuestionIndex = 0;
+    };
+
+  
+    function loadLeaderboard() {
+      const leaderboardList = document.getElementById("leaderboardList");
+      leaderboardList.innerHTML = "<li>Loading Leaderboard...</li>"; // Display loading message
+
+      onValue(ref(db, 'playerScores'), (snapshot) => {
+        const entries = [];
+        snapshot.forEach(child => {
+          const val = child.val();
+          if (val && typeof val.name === 'string' && typeof val.score === 'number') {
+            entries.push(val);
+          } else {
+            console.warn("Invalid leaderboard entry found, skipping:", val);
+          }
+        });
+        
+        entries.sort((a, b) => b.score - a.score); 
+
+        leaderboardList.innerHTML = ""; 
+        if (entries.length === 0) {
+            leaderboardList.innerHTML = "<li class='text-gray-600'>Nobody played play first</li>";
+            return;
+        }
+
+        entries.forEach(entry => {
+          const li = document.createElement("li");
+          li.textContent = `${entry.name}: ${entry.score.toFixed(1)}`; 
+          leaderboardList.appendChild(li);
+        });
+      }); 
+    }
+    loadLeaderboard();
+  </script>
+</body>
+</html>
