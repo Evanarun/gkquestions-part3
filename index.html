@@ -366,11 +366,11 @@
 
       if (selected === correct) {
         currentOverallScore += CORRECT_ANSWER_POINTS;
-        feedback.textContent = "Correct! (+1.0 points)";
+        feedback.textContent = "Correct (+1.0 points)";
         feedback.style.color = "green";
       } else {
         currentOverallScore -= WRONG_ANSWER_PENALTY;
-        feedback.textContent = `Wrong! Correct answer was: ${correct} (-0.5 points)`;
+        feedback.textContent = `Wrong correct answer was': ${correct} (-0.5 points)`;
         feedback.style.color = "red";
       }
       document.getElementById("scoreDisplay").textContent = `Overall Score: ${currentOverallScore.toFixed(1)}`;
